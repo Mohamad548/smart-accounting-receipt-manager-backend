@@ -41,6 +41,12 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ message: 'فیلدهای الزامی را پر کنید' });
     }
 
+    // Check if creditor with same name already exists
+    const existingCreditor = await CreditorModel.findByName(name);
+    if (existingCreditor) {
+      return res.status(409).json({ message: 'این شخص قبلاً اضافه شده است' });
+    }
+
     const creditor = await CreditorModel.create({
       name,
       accountNumber,
@@ -52,6 +58,10 @@ router.post('/', async (req, res) => {
     res.status(201).json(creditor);
   } catch (error: any) {
     console.error('Error creating creditor:', error);
+    // Check if it's a duplicate key error from database
+    if (error.code === '23505' || error.message?.includes('duplicate') || error.message?.includes('unique')) {
+      return res.status(409).json({ message: 'این شخص قبلاً اضافه شده است' });
+    }
     res.status(500).json({ message: 'خطا در ایجاد طلبکار' });
   }
 });

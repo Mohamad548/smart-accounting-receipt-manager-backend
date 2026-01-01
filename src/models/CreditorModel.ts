@@ -32,6 +32,22 @@ export class CreditorModel {
     };
   }
 
+  static async findByName(name: string): Promise<Creditor | null> {
+    const row = await queryOne<any>('SELECT * FROM creditors WHERE name = $1', [name]);
+    
+    if (!row) return null;
+    
+    return {
+      id: row.id,
+      name: row.name,
+      accountNumber: row.account_number,
+      shebaNumber: row.sheba_number,
+      totalAmount: parseFloat(row.total_amount),
+      remainingAmount: parseFloat(row.remaining_amount),
+      createdAt: parseInt(row.created_at),
+    };
+  }
+
   static async create(creditor: Omit<Creditor, 'id' | 'createdAt'>): Promise<Creditor> {
     const id = globalThis.crypto.randomUUID();
     const createdAt = Date.now();
