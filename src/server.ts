@@ -90,53 +90,108 @@ function bufferToBase64(buffer: Buffer, mimeType: string): string {
 // AI Extraction endpoints (require authentication)
 app.post('/api/extract-receipt', authenticateToken, upload.single('image'), async (req, res) => {
   try {
+    console.log('📥 [extract-receipt] Received request');
+    
     let imageBase64: string;
     
     // Check if file was uploaded via FormData
     if (req.file) {
+      console.log('📸 [extract-receipt] File received via FormData:', {
+        size: req.file.size,
+        mimetype: req.file.mimetype,
+        originalname: req.file.originalname
+      });
       imageBase64 = bufferToBase64(req.file.buffer, req.file.mimetype);
     } else if (req.body.image) {
+      console.log('📸 [extract-receipt] Image received via JSON body');
       // Fallback to JSON base64 (for backward compatibility)
       imageBase64 = req.body.image;
     } else {
-      return res.status(400).json({ message: 'تصویر ارسال نشده است.' });
+      console.error('❌ [extract-receipt] No image provided');
+      return res.status(400).json({ 
+        message: 'تصویر ارسال نشده است.',
+        error: 'No image file or image data provided'
+      });
     }
 
     const creditors = req.body.creditors ? JSON.parse(req.body.creditors) : [];
+    console.log('🔄 [extract-receipt] Calling extractReceiptData with', creditors.length, 'creditors...');
     const result = await extractReceiptData(imageBase64, creditors);
+    console.log('✅ [extract-receipt] Extraction successful');
     res.json(result);
   } catch (error: any) {
-    console.error('Error extracting receipt:', error);
-    res.status(500).json({ message: error.message || 'خطا در پردازش تصویر.' });
+    console.error('❌ [extract-receipt] Error extracting receipt');
+    console.error('📋 [extract-receipt] Error details:', JSON.stringify({
+      message: error.message,
+      status: error.status || error.code,
+      name: error.name,
+    }, null, 2));
+    console.error('📚 [extract-receipt] Error stack:', error.stack);
+    
+    const errorMessage = error.message || 'خطا در پردازش تصویر.';
+    const statusCode = error.status || error.code || 500;
+    
+    res.status(statusCode >= 400 && statusCode < 600 ? statusCode : 500).json({ 
+      message: errorMessage,
+      error: error.message || 'Unknown error',
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined,
+      status: statusCode
+    });
   }
 });
 
 app.post('/api/extract-creditor', authenticateToken, upload.single('image'), async (req, res) => {
   try {
+    console.log('📥 [extract-creditor] Received request');
+    
     let imageBase64: string;
     
     // Check if file was uploaded via FormData
     if (req.file) {
+      console.log('📸 [extract-creditor] File received via FormData:', {
+        size: req.file.size,
+        mimetype: req.file.mimetype,
+        originalname: req.file.originalname
+      });
       imageBase64 = bufferToBase64(req.file.buffer, req.file.mimetype);
     } else if (req.body.image) {
+      console.log('📸 [extract-creditor] Image received via JSON body');
       // Fallback to JSON base64 (for backward compatibility)
       imageBase64 = req.body.image;
     } else {
-      return res.status(400).json({ message: 'تصویر ارسال نشده است.' });
+      console.error('❌ [extract-creditor] No image provided');
+      return res.status(400).json({ 
+        message: 'تصویر ارسال نشده است.',
+        error: 'No image file or image data provided'
+      });
     }
 
+    console.log('🔄 [extract-creditor] Calling extractCreditorInfo...');
     const result = await extractCreditorInfo(imageBase64);
+    console.log('✅ [extract-creditor] Extraction successful:', {
+      hasName: !!result.name,
+      hasAccount: !!result.account,
+      hasSheba: !!result.sheba
+    });
     res.json(result);
   } catch (error: any) {
-    console.error('Error extracting creditor:', error);
-    console.error('Error details:', JSON.stringify(error, Object.getOwnPropertyNames(error)));
-    console.error('Error stack:', error.stack);
+    console.error('❌ [extract-creditor] Error extracting creditor');
+    console.error('📋 [extract-creditor] Error details:', JSON.stringify({
+      message: error.message,
+      status: error.status || error.code,
+      name: error.name,
+    }, null, 2));
+    console.error('📚 [extract-creditor] Error stack:', error.stack);
     
     // برگرداندن پیام خطای دقیق‌تر
     const errorMessage = error.message || 'خطا در خواندن تصویر فیش.';
-    res.status(500).json({ 
+    const statusCode = error.status || error.code || 500;
+    
+    res.status(statusCode >= 400 && statusCode < 600 ? statusCode : 500).json({ 
       message: errorMessage,
-      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+      error: error.message || 'Unknown error',
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined,
+      status: statusCode
     });
   }
 });
