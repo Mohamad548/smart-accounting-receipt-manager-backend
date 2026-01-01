@@ -6,11 +6,7 @@ import { ExtractedData, Creditor } from "../types.js";
  * Extracts specific recipient bank details (Name, Account, Sheba) for adding a new creditor.
  */
 export const extractCreditorInfo = async (base64Image: string): Promise<{ name: string, account: string, sheba: string }> => {
-  const apiKey = process.env.GEMINI_API_KEY || process.env.API_KEY;
-  if (!apiKey) {
-    throw new Error('GEMINI_API_KEY environment variable is not set');
-  }
-  const ai = new GoogleGenAI({ apiKey });
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY as string });
   
   const systemInstruction = `
     شما یک متخصص تحلیل مستندات بانکی هستید.
@@ -23,7 +19,7 @@ export const extractCreditorInfo = async (base64Image: string): Promise<{ name: 
 
   try {
     const response = await ai.models.generateContent({
-      model: "gemini-1.5-flash",
+      model: "gemini-3-flash-preview",
       contents: {
         parts: [
           { text: "استخراج اطلاعات حساب بانکی از تصویر:" },
@@ -49,37 +45,15 @@ export const extractCreditorInfo = async (base64Image: string): Promise<{ name: 
       },
     });
 
-    const result = JSON.parse(response.text || "{}");
-    return {
-      name: result.name || "",
-      account: result.account || "",
-      sheba: result.sheba || ""
-    };
+    return JSON.parse(response.text || "{}");
   } catch (error: any) {
     console.error("Creditor extraction failed", error);
-    console.error("Error details:", JSON.stringify(error, null, 2));
-    
-    // بهتر کردن پیام خطا
-    if (error.message?.includes('API key')) {
-      throw new Error('API Key معتبر نیست. لطفاً GEMINI_API_KEY را بررسی کنید.');
-    }
-    if (error.message?.includes('model')) {
-      throw new Error('مدل AI در دسترس نیست.');
-    }
-    if (error.message?.includes('quota') || error.message?.includes('limit')) {
-      throw new Error('محدودیت استفاده از API. لطفاً بعداً تلاش کنید.');
-    }
-    
-    throw new Error(error.message || "خطا در بازخوانی تصویر حساب.");
+    throw new Error("خطا در بازخوانی تصویر حساب.");
   }
 };
 
 export const extractReceiptData = async (base64Image: string, creditors: Creditor[] = []): Promise<ExtractedData> => {
-  const apiKey = process.env.GEMINI_API_KEY || process.env.API_KEY;
-  if (!apiKey) {
-    throw new Error('GEMINI_API_KEY environment variable is not set');
-  }
-  const ai = new GoogleGenAI({ apiKey });
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY as string });
   
   const creditorsContext = creditors.map(c => 
     `ID: ${c.id}, Name: ${c.name}, Account: ${c.accountNumber}, Sheba: ${c.shebaNumber}`
@@ -104,7 +78,7 @@ export const extractReceiptData = async (base64Image: string, creditors: Credito
 
   try {
     const response = await ai.models.generateContent({
-      model: "gemini-1.5-flash",
+      model: "gemini-3-flash-preview",
       contents: {
         parts: [
           { text: "تحلیل و تطبیق هوشمند فیش با لیست صراف:" },
