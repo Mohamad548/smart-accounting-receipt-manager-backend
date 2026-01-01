@@ -10,7 +10,7 @@ const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 export const extractCreditorInfo = async (base64Image: string, retries = 2): Promise<{ name: string, account: string, sheba: string }> => {
   console.log('🔍 [extractCreditorInfo] Starting extraction...');
-  const apiKey = process.env.API_KEY || process.env.GEMINI_API_KEY;
+  const apiKey = process.env.API_KEY
   
   if (!apiKey) {
     console.error('❌ [extractCreditorInfo] API_KEY not found');
