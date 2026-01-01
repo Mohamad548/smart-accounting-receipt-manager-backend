@@ -54,8 +54,31 @@ async function initializeSchema() {
   if (!pool) return;
 
   try {
-    const schemaPath = join(__dirname, 'schema.postgresql.sql');
-    const schema = readFileSync(schemaPath, 'utf-8');
+    // Try multiple paths to find the schema file
+    const possiblePaths = [
+      join(__dirname, 'schema.postgresql.sql'), // dist/database (production)
+      join(process.cwd(), 'dist', 'database', 'schema.postgresql.sql'), // absolute dist path
+      join(process.cwd(), 'src', 'database', 'schema.postgresql.sql'), // source path (development)
+      join(process.cwd(), 'backend', 'src', 'database', 'schema.postgresql.sql'), // if running from root
+    ];
+    
+    let schema: string | null = null;
+    let schemaPath: string | null = null;
+    
+    for (const path of possiblePaths) {
+      try {
+        schema = readFileSync(path, 'utf-8');
+        schemaPath = path;
+        break;
+      } catch (error) {
+        // Try next path
+        continue;
+      }
+    }
+    
+    if (!schema) {
+      throw new Error(`Schema file not found. Tried: ${possiblePaths.join(', ')}`);
+    }
     
     // Split by semicolon and execute each statement
     const statements = schema

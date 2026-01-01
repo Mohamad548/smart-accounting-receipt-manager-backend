@@ -5,7 +5,8 @@
   "main": "dist/server.js",
   "scripts": {
     "dev": "tsx watch src/server.ts",
-    "build": "tsc",
+    "build": "tsc && npm run copy-schema",
+    "copy-schema": "node scripts/copy-schema.js",
     "start": "node dist/server.js",
     "test:db": "tsx scripts/test-db.ts",
     "init:db": "tsx scripts/init-db.ts",
