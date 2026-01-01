@@ -129,8 +129,15 @@ app.post('/api/extract-creditor', authenticateToken, upload.single('image'), asy
     res.json(result);
   } catch (error: any) {
     console.error('Error extracting creditor:', error);
-    console.error('Error details:', error);
-    res.status(500).json({ message: error.message || 'خطا در خواندن تصویر فیش.' });
+    console.error('Error details:', JSON.stringify(error, Object.getOwnPropertyNames(error)));
+    console.error('Error stack:', error.stack);
+    
+    // برگرداندن پیام خطای دقیق‌تر
+    const errorMessage = error.message || 'خطا در خواندن تصویر فیش.';
+    res.status(500).json({ 
+      message: errorMessage,
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
   }
 });
 
