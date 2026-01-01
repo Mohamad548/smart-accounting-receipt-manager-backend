@@ -1,6 +1,9 @@
+import { config } from 'dotenv';
+import { resolve } from 'path';
 import express from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
+import multer from 'multer';
 import { extractReceiptData, extractCreditorInfo } from './services/geminiService';
 import { initDatabase } from './database/db';
 import { UserModel } from './models/UserModel';
@@ -10,6 +13,9 @@ import authRouter from './routes/auth';
 import creditorsRouter from './routes/creditors';
 import customersRouter from './routes/customers';
 import receiptsRouter from './routes/receipts';
+
+// Load .env file
+config({ path: resolve(process.cwd(), '.env') });
 
 // Initialize database
 initDatabase();
@@ -43,15 +49,36 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.use(cookieParser());
 app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+
+// Configure multer for file uploads
+const upload = multer({ 
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024 } // 10MB limit
+});
+
+// Helper function to convert file buffer to base64
+function bufferToBase64(buffer: Buffer, mimeType: string): string {
+  return `data:${mimeType};base64,${buffer.toString('base64')}`;
+}
 
 // AI Extraction endpoints (require authentication)
-app.post('/api/extract-receipt', authenticateToken, async (req, res) => {
+app.post('/api/extract-receipt', authenticateToken, upload.single('image'), async (req, res) => {
   try {
-    const { image, creditors } = req.body;
-    if (!image) {
+    let imageBase64: string;
+    
+    // Check if file was uploaded via FormData
+    if (req.file) {
+      imageBase64 = bufferToBase64(req.file.buffer, req.file.mimetype);
+    } else if (req.body.image) {
+      // Fallback to JSON base64 (for backward compatibility)
+      imageBase64 = req.body.image;
+    } else {
       return res.status(400).json({ message: 'تصویر ارسال نشده است.' });
     }
-    const result = await extractReceiptData(image, creditors || []);
+
+    const creditors = req.body.creditors ? JSON.parse(req.body.creditors) : [];
+    const result = await extractReceiptData(imageBase64, creditors);
     res.json(result);
   } catch (error: any) {
     console.error('Error extracting receipt:', error);
@@ -59,16 +86,25 @@ app.post('/api/extract-receipt', authenticateToken, async (req, res) => {
   }
 });
 
-app.post('/api/extract-creditor', authenticateToken, async (req, res) => {
+app.post('/api/extract-creditor', authenticateToken, upload.single('image'), async (req, res) => {
   try {
-    const { image } = req.body;
-    if (!image) {
+    let imageBase64: string;
+    
+    // Check if file was uploaded via FormData
+    if (req.file) {
+      imageBase64 = bufferToBase64(req.file.buffer, req.file.mimetype);
+    } else if (req.body.image) {
+      // Fallback to JSON base64 (for backward compatibility)
+      imageBase64 = req.body.image;
+    } else {
       return res.status(400).json({ message: 'تصویر ارسال نشده است.' });
     }
-    const result = await extractCreditorInfo(image);
+
+    const result = await extractCreditorInfo(imageBase64);
     res.json(result);
   } catch (error: any) {
     console.error('Error extracting creditor:', error);
+    console.error('Error details:', error);
     res.status(500).json({ message: error.message || 'خطا در خواندن تصویر فیش.' });
   }
 });

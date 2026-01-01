@@ -129,38 +129,8 @@ router.post('/logout', async (req, res: Response) => {
   }
 });
 
-// GET /api/auth/me - Get current user
-router.get('/me', async (req, res: Response) => {
-  try {
-    const accessToken = req.cookies?.accessToken;
-
-    if (!accessToken) {
-      return res.status(401).json({ message: 'دسترسی غیرمجاز' });
-    }
-
-    const { verifyAccessToken } = await import('../utils/jwt');
-    const payload = verifyAccessToken(accessToken);
-
-    if (!payload) {
-      return res.status(403).json({ message: 'توکن نامعتبر است' });
-    }
-
-    const user = await UserModel.findById(payload.userId);
-    if (!user) {
-      return res.status(404).json({ message: 'کاربر یافت نشد' });
-    }
-
-    res.json({
-      user: {
-        id: user.id,
-        username: user.username,
-      },
-    });
-  } catch (error: any) {
-    console.error('Get user error:', error);
-    res.status(500).json({ message: 'خطا در دریافت اطلاعات کاربر' });
-  }
-});
+// Removed /me endpoint - authentication is handled via cookies and token refresh
+// User info is returned in login response and stored in frontend
 
 export default router;
 
