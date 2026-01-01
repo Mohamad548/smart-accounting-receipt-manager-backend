@@ -9,7 +9,16 @@ import { ExtractedData, Creditor } from "../types.js";
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 export const extractCreditorInfo = async (base64Image: string, retries = 2): Promise<{ name: string, account: string, sheba: string }> => {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY as string });
+  console.log('🔍 [extractCreditorInfo] Starting extraction...');
+  const apiKey = process.env.API_KEY || process.env.GEMINI_API_KEY;
+  
+  if (!apiKey) {
+    console.error('❌ [extractCreditorInfo] API_KEY not found');
+    throw new Error('API_KEY environment variable is not set');
+  }
+  
+  console.log('✅ [extractCreditorInfo] API Key found, length:', apiKey.length);
+  const ai = new GoogleGenAI({ apiKey });
   
   const systemInstruction = `
     شما یک متخصص تحلیل مستندات بانکی هستید.
@@ -21,9 +30,13 @@ export const extractCreditorInfo = async (base64Image: string, retries = 2): Pro
   `;
 
   for (let attempt = 0; attempt <= retries; attempt++) {
+    const startTime = Date.now();
     try {
+      console.log(`🔄 [extractCreditorInfo] Attempt ${attempt + 1}/${retries + 1}`);
+      console.log('📤 [extractCreditorInfo] Sending request to Gemini API...');
+      
       const response = await ai.models.generateContent({
-        model: "gemini-3-flash-preview",
+        model: "gemini-1.5-flash",
         contents: {
           parts: [
             { text: "استخراج اطلاعات حساب بانکی از تصویر:" },
@@ -49,9 +62,20 @@ export const extractCreditorInfo = async (base64Image: string, retries = 2): Pro
         },
       });
 
-      return JSON.parse(response.text || "{}");
+      const endTime = Date.now();
+      const duration = endTime - startTime;
+      console.log(`✅ [extractCreditorInfo] Response received in ${duration}ms`);
+      
+      const result = JSON.parse(response.text || "{}");
+      console.log('✅ [extractCreditorInfo] Extraction successful');
+      return result;
     } catch (error: any) {
-      console.error(`Creditor extraction failed (attempt ${attempt + 1}/${retries + 1})`, error);
+      const endTime = Date.now();
+      const duration = endTime - startTime;
+      console.error(`❌ [extractCreditorInfo] Failed (attempt ${attempt + 1}/${retries + 1}) after ${duration}ms`);
+      console.error('Error status:', error.status || error.code);
+      console.error('Error message:', error.message);
+      console.error('Full error:', JSON.stringify(error, Object.getOwnPropertyNames(error)));
       
       // Check if it's a quota/rate limit error (429)
       if (error.status === 429 || error.code === 429 || error.message?.includes('429') || error.message?.includes('quota') || error.message?.includes('RESOURCE_EXHAUSTED')) {
@@ -75,7 +99,17 @@ export const extractCreditorInfo = async (base64Image: string, retries = 2): Pro
 };
 
 export const extractReceiptData = async (base64Image: string, creditors: Creditor[] = [], retries = 2): Promise<ExtractedData> => {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY as string });
+  console.log('🔍 [extractReceiptData] Starting extraction...');
+  const apiKey = process.env.API_KEY || process.env.GEMINI_API_KEY;
+  
+  if (!apiKey) {
+    console.error('❌ [extractReceiptData] API_KEY not found');
+    throw new Error('API_KEY environment variable is not set');
+  }
+  
+  console.log('✅ [extractReceiptData] API Key found, length:', apiKey.length);
+  console.log('📊 [extractReceiptData] Creditors count:', creditors.length);
+  const ai = new GoogleGenAI({ apiKey });
   
   const creditorsContext = creditors.map(c => 
     `ID: ${c.id}, Name: ${c.name}, Account: ${c.accountNumber}, Sheba: ${c.shebaNumber}`
@@ -99,9 +133,13 @@ export const extractReceiptData = async (base64Image: string, creditors: Credito
   `;
 
   for (let attempt = 0; attempt <= retries; attempt++) {
+    const startTime = Date.now();
     try {
+      console.log(`🔄 [extractReceiptData] Attempt ${attempt + 1}/${retries + 1}`);
+      console.log('📤 [extractReceiptData] Sending request to Gemini API...');
+      
       const response = await ai.models.generateContent({
-        model: "gemini-3-flash-preview",
+        model: "gemini-1.5-flash",
         contents: {
           parts: [
             { text: "تحلیل و تطبیق هوشمند فیش با لیست صراف:" },
@@ -155,6 +193,11 @@ export const extractReceiptData = async (base64Image: string, creditors: Credito
         data.dynamicFields.forEach((f: any) => dynamicFieldsRecord[f.key] = f.value);
       }
 
+      const endTime = Date.now();
+      const duration = endTime - startTime;
+      console.log(`✅ [extractReceiptData] Response received in ${duration}ms`);
+      console.log('✅ [extractReceiptData] Extraction successful');
+      
       return {
         amount: data.amount || 0,
         date: data.date || "",
@@ -166,7 +209,12 @@ export const extractReceiptData = async (base64Image: string, creditors: Credito
         dynamicFields: dynamicFieldsRecord
       };
     } catch (error: any) {
-      console.error(`Extraction failed (attempt ${attempt + 1}/${retries + 1})`, error);
+      const endTime = Date.now();
+      const duration = endTime - startTime;
+      console.error(`❌ [extractReceiptData] Failed (attempt ${attempt + 1}/${retries + 1}) after ${duration}ms`);
+      console.error('Error status:', error.status || error.code);
+      console.error('Error message:', error.message);
+      console.error('Full error:', JSON.stringify(error, Object.getOwnPropertyNames(error)));
       
       // Check if it's a quota/rate limit error (429)
       if (error.status === 429 || error.code === 429 || error.message?.includes('429') || error.message?.includes('quota') || error.message?.includes('RESOURCE_EXHAUSTED')) {

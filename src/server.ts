@@ -172,6 +172,95 @@ app.get('/api/health', async (req, res) => {
   }
 });
 
+// Test Gemini API Connection
+app.get('/api/test-gemini', authenticateToken, async (req, res) => {
+  try {
+    console.log('🔍 Testing Gemini API connection...');
+    const apiKey = process.env.API_KEY || process.env.GEMINI_API_KEY;
+    
+    if (!apiKey) {
+      console.error('❌ API_KEY not found in environment variables');
+      return res.status(500).json({ 
+        success: false,
+        message: 'API Key تنظیم نشده است',
+        error: 'API_KEY environment variable is not set',
+        details: 'لطفاً API_KEY را در environment variables تنظیم کنید'
+      });
+    }
+
+    console.log('✅ API Key found, length:', apiKey.length);
+    
+    const { GoogleGenAI } = await import('@google/genai');
+    const ai = new GoogleGenAI({ apiKey });
+    
+    console.log('🔄 Sending test request to Gemini API...');
+    const startTime = Date.now();
+    
+    try {
+      const response = await ai.models.generateContent({
+        model: "gemini-1.5-flash",
+        contents: {
+          parts: [{ text: "سلام، فقط یک تست ساده است. لطفاً پاسخ دهید: OK" }],
+        },
+      });
+      
+      const endTime = Date.now();
+      const duration = endTime - startTime;
+      
+      console.log('✅ Gemini API responded successfully');
+      console.log('⏱️ Response time:', duration, 'ms');
+      
+      res.json({ 
+        success: true,
+        message: 'اتصال به Gemini API برقرار است',
+        response: response.text || 'OK',
+        responseTime: `${duration}ms`,
+        model: 'gemini-1.5-flash',
+        timestamp: new Date().toISOString()
+      });
+    } catch (geminiError: any) {
+      const endTime = Date.now();
+      const duration = endTime - startTime;
+      
+      console.error('❌ Gemini API error:', geminiError);
+      console.error('Error status:', geminiError.status);
+      console.error('Error code:', geminiError.code);
+      console.error('Error message:', geminiError.message);
+      
+      let errorMessage = 'خطا در اتصال به Gemini API';
+      let errorDetails = geminiError.message || 'Unknown error';
+      
+      if (geminiError.status === 429 || geminiError.code === 429) {
+        errorMessage = 'محدودیت Quota: تعداد درخواست‌های شما تمام شده است';
+        errorDetails = 'لطفاً چند دقیقه صبر کنید یا quota خود را افزایش دهید';
+      } else if (geminiError.message?.includes('API key')) {
+        errorMessage = 'API Key معتبر نیست';
+        errorDetails = 'لطفاً API_KEY را بررسی کنید';
+      } else if (geminiError.message?.includes('quota')) {
+        errorMessage = 'Quota تمام شده است';
+        errorDetails = 'لطفاً چند دقیقه صبر کنید';
+      }
+      
+      res.status(500).json({ 
+        success: false,
+        message: errorMessage,
+        error: errorDetails,
+        status: geminiError.status || geminiError.code,
+        responseTime: `${duration}ms`,
+        timestamp: new Date().toISOString()
+      });
+    }
+  } catch (error: any) {
+    console.error('❌ Test Gemini API failed:', error);
+    res.status(500).json({ 
+      success: false,
+      message: 'خطا در تست اتصال',
+      error: error.message || 'Unknown error',
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
 // Start token cleanup
 startTokenCleanup();
 
