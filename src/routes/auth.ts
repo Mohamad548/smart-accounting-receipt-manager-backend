@@ -1,7 +1,7 @@
 import { Router, Response } from 'express';
-import { UserModel } from '../models/UserModel';
-import { RefreshTokenModel } from '../models/RefreshTokenModel';
-import { generateAccessToken, generateRefreshToken, verifyRefreshToken, TokenPayload } from '../utils/jwt';
+import { UserModel } from '../models/UserModel.js';
+import { RefreshTokenModel } from '../models/RefreshTokenModel.js';
+import { generateAccessToken, generateRefreshToken, verifyRefreshToken, TokenPayload } from '../utils/jwt.js';
 
 const router = Router();
 

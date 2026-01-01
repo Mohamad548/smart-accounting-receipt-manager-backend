@@ -4,15 +4,15 @@ import express from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import multer from 'multer';
-import { extractReceiptData, extractCreditorInfo } from './services/geminiService';
-import { initDatabase } from './database/db';
-import { UserModel } from './models/UserModel';
-import { authenticateToken } from './middleware/auth';
-import { startTokenCleanup } from './utils/cleanup';
-import authRouter from './routes/auth';
-import creditorsRouter from './routes/creditors';
-import customersRouter from './routes/customers';
-import receiptsRouter from './routes/receipts';
+import { extractReceiptData, extractCreditorInfo } from './services/geminiService.js';
+import { initDatabase } from './database/db.js';
+import { UserModel } from './models/UserModel.js';
+import { authenticateToken } from './middleware/auth.js';
+import { startTokenCleanup } from './utils/cleanup.js';
+import authRouter from './routes/auth.js';
+import creditorsRouter from './routes/creditors.js';
+import customersRouter from './routes/customers.js';
+import receiptsRouter from './routes/receipts.js';
 
 // Load .env file
 config({ path: resolve(process.cwd(), '.env') });
@@ -120,7 +120,7 @@ app.use('/api/receipts', receiptsRouter);
 // Health check
 app.get('/api/health', async (req, res) => {
   try {
-    const { getPool } = await import('./database/db');
+    const { getPool } = await import('./database/db.js');
     const pool = getPool();
     await pool.query('SELECT 1');
     res.json({ 

@@ -1,5 +1,5 @@
-import { query, queryOne, execute } from '../database/query';
-import { getTokenExpiry } from '../utils/jwt';
+import { query, queryOne, execute } from '../database/query.js';
+import { getTokenExpiry } from '../utils/jwt.js';
 
 export interface RefreshToken {
   id: string;

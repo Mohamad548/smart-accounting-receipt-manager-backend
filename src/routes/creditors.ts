@@ -1,6 +1,6 @@
 import { Router } from 'express';
-import { CreditorModel } from '../models/CreditorModel';
-import { authenticateToken } from '../middleware/auth';
+import { CreditorModel } from '../models/CreditorModel.js';
+import { authenticateToken } from '../middleware/auth.js';
 
 const router = Router();
 

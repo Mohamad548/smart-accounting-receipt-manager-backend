@@ -1,4 +1,4 @@
-import { RefreshTokenModel } from '../models/RefreshTokenModel';
+import { RefreshTokenModel } from '../models/RefreshTokenModel.js';
 
 // Cleanup expired refresh tokens periodically
 export function startTokenCleanup() {

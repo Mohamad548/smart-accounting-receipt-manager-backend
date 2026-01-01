@@ -1,7 +1,7 @@
 import { Router } from 'express';
-import { ReceiptModel } from '../models/ReceiptModel';
-import { CustomerModel } from '../models/CustomerModel';
-import { authenticateToken } from '../middleware/auth';
+import { ReceiptModel } from '../models/ReceiptModel.js';
+import { CustomerModel } from '../models/CustomerModel.js';
+import { authenticateToken } from '../middleware/auth.js';
 
 const router = Router();
 

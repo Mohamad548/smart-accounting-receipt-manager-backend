@@ -1,5 +1,5 @@
-import { query, queryOne, execute } from '../database/query';
-import { Creditor } from '../types';
+import { query, queryOne, execute } from '../database/query.js';
+import { Creditor } from '../types.js';
 
 export class CreditorModel {
   static async getAll(): Promise<Creditor[]> {

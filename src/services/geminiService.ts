@@ -1,6 +1,6 @@
 
 import { GoogleGenAI, Type } from "@google/genai";
-import { ExtractedData, Creditor } from "../types";
+import { ExtractedData, Creditor } from "../types.js";
 
 /**
  * Extracts specific recipient bank details (Name, Account, Sheba) for adding a new creditor.

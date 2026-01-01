@@ -1,4 +1,4 @@
-import { getPool } from './db';
+import { getPool } from './db.js';
 import { PoolClient } from 'pg';
 
 // Schema name

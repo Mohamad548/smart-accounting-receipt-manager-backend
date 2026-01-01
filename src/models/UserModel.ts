@@ -1,5 +1,5 @@
-import { query, queryOne, execute } from '../database/query';
-import { hashPassword, comparePassword } from '../utils/password';
+import { query, queryOne, execute } from '../database/query.js';
+import { hashPassword, comparePassword } from '../utils/password.js';
 
 export interface User {
   id: string;

@@ -1,5 +1,5 @@
-import { query, queryOne, execute } from '../database/query';
-import { ReceiptRecord } from '../types';
+import { query, queryOne, execute } from '../database/query.js';
+import { ReceiptRecord } from '../types.js';
 
 export class ReceiptModel {
   static async getAll(): Promise<ReceiptRecord[]> {
