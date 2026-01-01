@@ -8,9 +8,9 @@ const router = Router();
 router.use(authenticateToken);
 
 // GET /api/customers - Get all customers
-router.get('/', (req, res) => {
+router.get('/', async (req, res) => {
   try {
-    const customers = CustomerModel.getAll();
+    const customers = await CustomerModel.getAll();
     res.json(customers);
   } catch (error: any) {
     console.error('Error fetching customers:', error);
@@ -19,9 +19,9 @@ router.get('/', (req, res) => {
 });
 
 // GET /api/customers/:id - Get customer by ID
-router.get('/:id', (req, res) => {
+router.get('/:id', async (req, res) => {
   try {
-    const customer = CustomerModel.getById(req.params.id);
+    const customer = await CustomerModel.getById(req.params.id);
     if (!customer) {
       return res.status(404).json({ message: 'مشتری یافت نشد' });
     }
@@ -33,7 +33,7 @@ router.get('/:id', (req, res) => {
 });
 
 // POST /api/customers - Create new customer
-router.post('/', (req, res) => {
+router.post('/', async (req, res) => {
   try {
     const { name, expectedAmount, collectedAmount, maturityDate } = req.body;
     
@@ -41,7 +41,7 @@ router.post('/', (req, res) => {
       return res.status(400).json({ message: 'فیلدهای الزامی را پر کنید' });
     }
 
-    const customer = CustomerModel.create({
+    const customer = await CustomerModel.create({
       name,
       expectedAmount: Number(expectedAmount),
       collectedAmount: collectedAmount !== undefined ? Number(collectedAmount) : 0,
@@ -51,7 +51,7 @@ router.post('/', (req, res) => {
     res.status(201).json(customer);
   } catch (error: any) {
     console.error('Error creating customer:', error);
-    if (error.message?.includes('UNIQUE constraint')) {
+    if (error.message?.includes('UNIQUE') || error.code === '23505') {
       return res.status(400).json({ message: 'این مشتری قبلاً ثبت شده است' });
     }
     res.status(500).json({ message: 'خطا در ایجاد مشتری' });
@@ -59,7 +59,7 @@ router.post('/', (req, res) => {
 });
 
 // PUT /api/customers/:id - Update customer
-router.put('/:id', (req, res) => {
+router.put('/:id', async (req, res) => {
   try {
     const { name, expectedAmount, collectedAmount, maturityDate } = req.body;
     
@@ -69,7 +69,7 @@ router.put('/:id', (req, res) => {
     if (collectedAmount !== undefined) updates.collectedAmount = Number(collectedAmount);
     if (maturityDate !== undefined) updates.maturityDate = maturityDate;
 
-    const customer = CustomerModel.update(req.params.id, updates);
+    const customer = await CustomerModel.update(req.params.id, updates);
     if (!customer) {
       return res.status(404).json({ message: 'مشتری یافت نشد' });
     }
@@ -82,9 +82,9 @@ router.put('/:id', (req, res) => {
 });
 
 // DELETE /api/customers/:id - Delete customer
-router.delete('/:id', (req, res) => {
+router.delete('/:id', async (req, res) => {
   try {
-    const deleted = CustomerModel.delete(req.params.id);
+    const deleted = await CustomerModel.delete(req.params.id);
     if (!deleted) {
       return res.status(404).json({ message: 'مشتری یافت نشد' });
     }

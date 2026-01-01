@@ -1,4 +1,4 @@
-import { getDatabase } from '../database/db';
+import { query, queryOne, execute } from '../database/query';
 import { hashPassword, comparePassword } from '../utils/password';
 
 export interface User {
@@ -10,50 +10,31 @@ export interface User {
 }
 
 export class UserModel {
-  static create(username: string, password: string): Promise<User> {
-    return new Promise(async (resolve, reject) => {
-      try {
-        const db = getDatabase();
-        const id = crypto.randomUUID();
-        const createdAt = Date.now();
-        const passwordHash = await hashPassword(password);
+  static async create(username: string, password: string): Promise<User> {
+    const id = globalThis.crypto.randomUUID();
+    const createdAt = Date.now();
+    const passwordHash = await hashPassword(password);
 
-        db.prepare(`
-          INSERT INTO users (id, username, password_hash, created_at, updated_at)
-          VALUES (?, ?, ?, ?, ?)
-        `).run(id, username, passwordHash, createdAt, createdAt);
-
-        resolve({
-          id,
-          username,
-          passwordHash,
-          createdAt,
-          updatedAt: createdAt,
-        });
-      } catch (error: any) {
-        reject(error);
-      }
-    });
-  }
-
-  static findByUsername(username: string): User | null {
-    const db = getDatabase();
-    const row = db.prepare('SELECT * FROM users WHERE username = ?').get(username) as any;
-
-    if (!row) return null;
+    await execute(
+      `INSERT INTO users (id, username, password_hash, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, $5)`,
+      [id, username, passwordHash, createdAt, createdAt]
+    );
 
     return {
-      id: row.id,
-      username: row.username,
-      passwordHash: row.password_hash,
-      createdAt: row.created_at,
-      updatedAt: row.updated_at,
+      id,
+      username,
+      passwordHash,
+      createdAt,
+      updatedAt: createdAt,
     };
   }
 
-  static findById(id: string): User | null {
-    const db = getDatabase();
-    const row = db.prepare('SELECT * FROM users WHERE id = ?').get(id) as any;
+  static async findByUsername(username: string): Promise<User | null> {
+    const row = await queryOne<any>(
+      'SELECT * FROM users WHERE username = $1',
+      [username]
+    );
 
     if (!row) return null;
 
@@ -61,13 +42,30 @@ export class UserModel {
       id: row.id,
       username: row.username,
       passwordHash: row.password_hash,
-      createdAt: row.created_at,
-      updatedAt: row.updated_at,
+      createdAt: parseInt(row.created_at),
+      updatedAt: parseInt(row.updated_at),
+    };
+  }
+
+  static async findById(id: string): Promise<User | null> {
+    const row = await queryOne<any>(
+      'SELECT * FROM users WHERE id = $1',
+      [id]
+    );
+
+    if (!row) return null;
+
+    return {
+      id: row.id,
+      username: row.username,
+      passwordHash: row.password_hash,
+      createdAt: parseInt(row.created_at),
+      updatedAt: parseInt(row.updated_at),
     };
   }
 
   static async verifyPassword(username: string, password: string): Promise<User | null> {
-    const user = this.findByUsername(username);
+    const user = await this.findByUsername(username);
     if (!user) return null;
 
     const isValid = await comparePassword(password, user.passwordHash);
@@ -76,4 +74,3 @@ export class UserModel {
     return user;
   }
 }
-

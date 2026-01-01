@@ -8,9 +8,9 @@ const router = Router();
 router.use(authenticateToken);
 
 // GET /api/creditors - Get all creditors
-router.get('/', (req, res) => {
+router.get('/', async (req, res) => {
   try {
-    const creditors = CreditorModel.getAll();
+    const creditors = await CreditorModel.getAll();
     res.json(creditors);
   } catch (error: any) {
     console.error('Error fetching creditors:', error);
@@ -19,9 +19,9 @@ router.get('/', (req, res) => {
 });
 
 // GET /api/creditors/:id - Get creditor by ID
-router.get('/:id', (req, res) => {
+router.get('/:id', async (req, res) => {
   try {
-    const creditor = CreditorModel.getById(req.params.id);
+    const creditor = await CreditorModel.getById(req.params.id);
     if (!creditor) {
       return res.status(404).json({ message: 'طلبکار یافت نشد' });
     }
@@ -33,7 +33,7 @@ router.get('/:id', (req, res) => {
 });
 
 // POST /api/creditors - Create new creditor
-router.post('/', (req, res) => {
+router.post('/', async (req, res) => {
   try {
     const { name, accountNumber, shebaNumber, totalAmount, remainingAmount } = req.body;
     
@@ -41,7 +41,7 @@ router.post('/', (req, res) => {
       return res.status(400).json({ message: 'فیلدهای الزامی را پر کنید' });
     }
 
-    const creditor = CreditorModel.create({
+    const creditor = await CreditorModel.create({
       name,
       accountNumber,
       shebaNumber: shebaNumber || '',
@@ -57,7 +57,7 @@ router.post('/', (req, res) => {
 });
 
 // PUT /api/creditors/:id - Update creditor
-router.put('/:id', (req, res) => {
+router.put('/:id', async (req, res) => {
   try {
     const { name, accountNumber, shebaNumber, totalAmount, remainingAmount } = req.body;
     
@@ -68,7 +68,7 @@ router.put('/:id', (req, res) => {
     if (totalAmount !== undefined) updates.totalAmount = Number(totalAmount);
     if (remainingAmount !== undefined) updates.remainingAmount = Number(remainingAmount);
 
-    const creditor = CreditorModel.update(req.params.id, updates);
+    const creditor = await CreditorModel.update(req.params.id, updates);
     if (!creditor) {
       return res.status(404).json({ message: 'طلبکار یافت نشد' });
     }
@@ -81,9 +81,9 @@ router.put('/:id', (req, res) => {
 });
 
 // DELETE /api/creditors/:id - Delete creditor
-router.delete('/:id', (req, res) => {
+router.delete('/:id', async (req, res) => {
   try {
-    const deleted = CreditorModel.delete(req.params.id);
+    const deleted = await CreditorModel.delete(req.params.id);
     if (!deleted) {
       return res.status(404).json({ message: 'طلبکار یافت نشد' });
     }

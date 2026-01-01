@@ -1,15 +1,14 @@
-import { getDatabase } from '../database/db';
+import { query, queryOne, execute } from '../database/query';
 import { ReceiptRecord } from '../types';
 
 export class ReceiptModel {
-  static getAll(): ReceiptRecord[] {
-    const db = getDatabase();
-    const rows = db.prepare('SELECT * FROM receipt_records ORDER BY created_at DESC').all() as any[];
+  static async getAll(): Promise<ReceiptRecord[]> {
+    const rows = await query<any>('SELECT * FROM receipt_records ORDER BY created_at DESC');
     
     return rows.map(row => ({
       id: row.id,
       customerId: row.customer_id,
-      amount: row.amount,
+      amount: parseFloat(row.amount),
       date: row.date,
       refNumber: row.ref_number || '',
       sender: row.sender || '',
@@ -17,21 +16,20 @@ export class ReceiptModel {
       description: row.description || '',
       imageUrl: row.image_url,
       matchedCreditorId: row.matched_creditor_id || undefined,
-      dynamicFields: row.dynamic_fields ? JSON.parse(row.dynamic_fields) : {},
-      createdAt: row.created_at,
+      dynamicFields: row.dynamic_fields || {},
+      createdAt: parseInt(row.created_at),
     }));
   }
 
-  static getById(id: string): ReceiptRecord | null {
-    const db = getDatabase();
-    const row = db.prepare('SELECT * FROM receipt_records WHERE id = ?').get(id) as any;
+  static async getById(id: string): Promise<ReceiptRecord | null> {
+    const row = await queryOne<any>('SELECT * FROM receipt_records WHERE id = $1', [id]);
     
     if (!row) return null;
     
     return {
       id: row.id,
       customerId: row.customer_id,
-      amount: row.amount,
+      amount: parseFloat(row.amount),
       date: row.date,
       refNumber: row.ref_number || '',
       sender: row.sender || '',
@@ -39,19 +37,21 @@ export class ReceiptModel {
       description: row.description || '',
       imageUrl: row.image_url,
       matchedCreditorId: row.matched_creditor_id || undefined,
-      dynamicFields: row.dynamic_fields ? JSON.parse(row.dynamic_fields) : {},
-      createdAt: row.created_at,
+      dynamicFields: row.dynamic_fields || {},
+      createdAt: parseInt(row.created_at),
     };
   }
 
-  static getByCustomerId(customerId: string): ReceiptRecord[] {
-    const db = getDatabase();
-    const rows = db.prepare('SELECT * FROM receipt_records WHERE customer_id = ? ORDER BY created_at DESC').all(customerId) as any[];
+  static async getByCustomerId(customerId: string): Promise<ReceiptRecord[]> {
+    const rows = await query<any>(
+      'SELECT * FROM receipt_records WHERE customer_id = $1 ORDER BY created_at DESC',
+      [customerId]
+    );
     
     return rows.map(row => ({
       id: row.id,
       customerId: row.customer_id,
-      amount: row.amount,
+      amount: parseFloat(row.amount),
       date: row.date,
       refNumber: row.ref_number || '',
       sender: row.sender || '',
@@ -59,21 +59,20 @@ export class ReceiptModel {
       description: row.description || '',
       imageUrl: row.image_url,
       matchedCreditorId: row.matched_creditor_id || undefined,
-      dynamicFields: row.dynamic_fields ? JSON.parse(row.dynamic_fields) : {},
-      createdAt: row.created_at,
+      dynamicFields: row.dynamic_fields || {},
+      createdAt: parseInt(row.created_at),
     }));
   }
 
-  static getByRefNumber(refNumber: string): ReceiptRecord | null {
-    const db = getDatabase();
-    const row = db.prepare('SELECT * FROM receipt_records WHERE ref_number = ?').get(refNumber) as any;
+  static async getByRefNumber(refNumber: string): Promise<ReceiptRecord | null> {
+    const row = await queryOne<any>('SELECT * FROM receipt_records WHERE ref_number = $1', [refNumber]);
     
     if (!row) return null;
     
     return {
       id: row.id,
       customerId: row.customer_id,
-      amount: row.amount,
+      amount: parseFloat(row.amount),
       date: row.date,
       refNumber: row.ref_number || '',
       sender: row.sender || '',
@@ -81,35 +80,35 @@ export class ReceiptModel {
       description: row.description || '',
       imageUrl: row.image_url,
       matchedCreditorId: row.matched_creditor_id || undefined,
-      dynamicFields: row.dynamic_fields ? JSON.parse(row.dynamic_fields) : {},
-      createdAt: row.created_at,
+      dynamicFields: row.dynamic_fields || {},
+      createdAt: parseInt(row.created_at),
     };
   }
 
-  static create(receipt: Omit<ReceiptRecord, 'id' | 'createdAt'>): ReceiptRecord {
-    const db = getDatabase();
-    const id = crypto.randomUUID();
+  static async create(receipt: Omit<ReceiptRecord, 'id' | 'createdAt'>): Promise<ReceiptRecord> {
+    const id = globalThis.crypto.randomUUID();
     const createdAt = Date.now();
 
-    db.prepare(`
-      INSERT INTO receipt_records (
+    await execute(
+      `INSERT INTO receipt_records (
         id, customer_id, amount, date, ref_number, sender, receiver, 
         description, image_url, matched_creditor_id, dynamic_fields, created_at
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(
-      id,
-      receipt.customerId,
-      receipt.amount,
-      receipt.date,
-      receipt.refNumber || null,
-      receipt.sender || null,
-      receipt.receiver || null,
-      receipt.description || null,
-      receipt.imageUrl,
-      receipt.matchedCreditorId || null,
-      JSON.stringify(receipt.dynamicFields || {}),
-      createdAt
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
+      [
+        id,
+        receipt.customerId,
+        receipt.amount,
+        receipt.date,
+        receipt.refNumber || null,
+        receipt.sender || null,
+        receipt.receiver || null,
+        receipt.description || null,
+        receipt.imageUrl,
+        receipt.matchedCreditorId || null,
+        JSON.stringify(receipt.dynamicFields || {}),
+        createdAt
+      ]
     );
 
     return {
@@ -119,10 +118,8 @@ export class ReceiptModel {
     };
   }
 
-  static delete(id: string): boolean {
-    const db = getDatabase();
-    const result = db.prepare('DELETE FROM receipt_records WHERE id = ?').run(id);
-    return result.changes > 0;
+  static async delete(id: string): Promise<boolean> {
+    const result = await execute('DELETE FROM receipt_records WHERE id = $1', [id]);
+    return result > 0;
   }
 }
-

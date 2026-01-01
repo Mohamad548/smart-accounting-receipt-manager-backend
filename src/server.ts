@@ -16,14 +16,16 @@ initDatabase();
 
 // Create default admin user if not exists
 const createDefaultUser = async () => {
-  const existingUser = UserModel.findByUsername('admin');
-  if (!existingUser) {
-    try {
+  try {
+    const existingUser = await UserModel.findByUsername('admin');
+    if (!existingUser) {
       await UserModel.create('admin', 'admin123');
       console.log('✅ Default admin user created (username: admin, password: admin123)');
-    } catch (error) {
-      console.error('Error creating default user:', error);
+    } else {
+      console.log('✅ Admin user already exists');
     }
+  } catch (error) {
+    console.error('Error checking/creating default user:', error);
   }
 };
 createDefaultUser();

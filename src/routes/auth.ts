@@ -44,7 +44,7 @@ router.post('/login', async (req, res: Response) => {
     const refreshToken = generateRefreshToken(tokenPayload);
 
     // Save refresh token to database
-    RefreshTokenModel.create(user.id, refreshToken);
+    await RefreshTokenModel.create(user.id, refreshToken);
 
     // Set cookies
     res.cookie('accessToken', accessToken, cookieOptions);
@@ -79,14 +79,14 @@ router.post('/refresh', async (req, res: Response) => {
     }
 
     // Check if token exists in database
-    const tokenRecord = RefreshTokenModel.findByToken(refreshToken);
+    const tokenRecord = await RefreshTokenModel.findByToken(refreshToken);
     if (!tokenRecord) {
       return res.status(403).json({ message: 'Refresh token یافت نشد' });
     }
 
     // Check if token is expired
     if (tokenRecord.expiresAt < Date.now()) {
-      RefreshTokenModel.deleteByToken(refreshToken);
+      await RefreshTokenModel.deleteByToken(refreshToken);
       return res.status(403).json({ message: 'Refresh token منقضی شده است' });
     }
 
@@ -115,7 +115,7 @@ router.post('/logout', async (req, res: Response) => {
 
     // Delete refresh token from database
     if (refreshToken) {
-      RefreshTokenModel.deleteByToken(refreshToken);
+      await RefreshTokenModel.deleteByToken(refreshToken);
     }
 
     // Clear cookies
@@ -145,7 +145,7 @@ router.get('/me', async (req, res: Response) => {
       return res.status(403).json({ message: 'توکن نامعتبر است' });
     }
 
-    const user = UserModel.findById(payload.userId);
+    const user = await UserModel.findById(payload.userId);
     if (!user) {
       return res.status(404).json({ message: 'کاربر یافت نشد' });
     }

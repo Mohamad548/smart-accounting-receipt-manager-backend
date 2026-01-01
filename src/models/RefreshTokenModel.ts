@@ -1,4 +1,4 @@
-import { getDatabase } from '../database/db';
+import { query, queryOne, execute } from '../database/query';
 import { getTokenExpiry } from '../utils/jwt';
 
 export interface RefreshToken {
@@ -10,16 +10,16 @@ export interface RefreshToken {
 }
 
 export class RefreshTokenModel {
-  static create(userId: string, token: string): RefreshToken {
-    const db = getDatabase();
-    const id = crypto.randomUUID();
+  static async create(userId: string, token: string): Promise<RefreshToken> {
+    const id = globalThis.crypto.randomUUID();
     const createdAt = Date.now();
     const expiresAt = getTokenExpiry('7d') * 1000; // Convert to milliseconds
 
-    db.prepare(`
-      INSERT INTO refresh_tokens (id, user_id, token, expires_at, created_at)
-      VALUES (?, ?, ?, ?, ?)
-    `).run(id, userId, token, expiresAt, createdAt);
+    await execute(
+      `INSERT INTO refresh_tokens (id, user_id, token, expires_at, created_at)
+       VALUES ($1, $2, $3, $4, $5)`,
+      [id, userId, token, expiresAt, createdAt]
+    );
 
     return {
       id,
@@ -30,9 +30,8 @@ export class RefreshTokenModel {
     };
   }
 
-  static findByToken(token: string): RefreshToken | null {
-    const db = getDatabase();
-    const row = db.prepare('SELECT * FROM refresh_tokens WHERE token = ?').get(token) as any;
+  static async findByToken(token: string): Promise<RefreshToken | null> {
+    const row = await queryOne<any>('SELECT * FROM refresh_tokens WHERE token = $1', [token]);
 
     if (!row) return null;
 
@@ -40,28 +39,24 @@ export class RefreshTokenModel {
       id: row.id,
       userId: row.user_id,
       token: row.token,
-      expiresAt: row.expires_at,
-      createdAt: row.created_at,
+      expiresAt: parseInt(row.expires_at),
+      createdAt: parseInt(row.created_at),
     };
   }
 
-  static deleteByToken(token: string): boolean {
-    const db = getDatabase();
-    const result = db.prepare('DELETE FROM refresh_tokens WHERE token = ?').run(token);
-    return result.changes > 0;
+  static async deleteByToken(token: string): Promise<boolean> {
+    const result = await execute('DELETE FROM refresh_tokens WHERE token = $1', [token]);
+    return result > 0;
   }
 
-  static deleteByUserId(userId: string): boolean {
-    const db = getDatabase();
-    const result = db.prepare('DELETE FROM refresh_tokens WHERE user_id = ?').run(userId);
-    return result.changes > 0;
+  static async deleteByUserId(userId: string): Promise<boolean> {
+    const result = await execute('DELETE FROM refresh_tokens WHERE user_id = $1', [userId]);
+    return result > 0;
   }
 
-  static deleteExpired(): number {
-    const db = getDatabase();
+  static async deleteExpired(): Promise<number> {
     const now = Date.now();
-    const result = db.prepare('DELETE FROM refresh_tokens WHERE expires_at < ?').run(now);
-    return result.changes;
+    const result = await execute('DELETE FROM refresh_tokens WHERE expires_at < $1', [now]);
+    return result;
   }
 }
-

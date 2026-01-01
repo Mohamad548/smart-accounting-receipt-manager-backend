@@ -1,69 +1,110 @@
-import Database from 'better-sqlite3';
-import { readFileSync, mkdirSync } from 'fs';
+import { Pool, PoolClient } from 'pg';
+import { readFileSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-const DB_PATH = process.env.DB_PATH || join(__dirname, '../../data/database.db');
-const SCHEMA_PATH = join(__dirname, 'schema.sql');
+let pool: Pool | null = null;
 
-let db: Database.Database | null = null;
-
-export function initDatabase(): Database.Database {
-  if (db) {
-    return db;
+// Get database connection string from environment
+function getDatabaseUrl(): string {
+  const dbUrl = process.env.DATABASE_URL;
+  if (!dbUrl) {
+    throw new Error('DATABASE_URL environment variable is not set');
   }
-
-  // Ensure data directory exists
-  try {
-    mkdirSync(dirname(DB_PATH), { recursive: true });
-  } catch (error) {
-    // Directory might already exist
-  }
-
-  // Create or open database
-  db = new Database(DB_PATH);
-  
-  // Enable foreign keys
-  db.pragma('foreign_keys = ON');
-
-  // Read and execute schema
-  try {
-    const schema = readFileSync(SCHEMA_PATH, 'utf-8');
-    db.exec(schema);
-    console.log('✅ Database initialized successfully');
-  } catch (error) {
-    console.error('❌ Error initializing database:', error);
-    throw error;
-  }
-
-  return db;
+  return dbUrl;
 }
 
-export function getDatabase(): Database.Database {
-  if (!db) {
+export function initDatabase(): Pool {
+  if (pool) {
+    return pool;
+  }
+
+  const databaseUrl = getDatabaseUrl();
+  
+  pool = new Pool({
+    connectionString: databaseUrl,
+    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+  });
+
+  // Test connection
+  pool.query('SELECT NOW()')
+    .then(() => {
+      console.log('✅ Database connected successfully');
+    })
+    .catch((err) => {
+      console.error('❌ Database connection failed:', err);
+    });
+
+  // Initialize schema
+  initializeSchema();
+
+  return pool;
+}
+
+async function initializeSchema() {
+  if (!pool) return;
+
+  try {
+    const schemaPath = join(__dirname, 'schema.postgresql.sql');
+    const schema = readFileSync(schemaPath, 'utf-8');
+    
+    // Split by semicolon and execute each statement
+    const statements = schema
+      .split(';')
+      .map(s => s.trim())
+      .filter(s => s.length > 0 && !s.startsWith('--'));
+
+    const client = await pool.connect();
+    try {
+      for (const statement of statements) {
+        if (statement.trim()) {
+          await client.query(statement);
+        }
+      }
+      console.log('✅ Database schema initialized successfully');
+    } finally {
+      client.release();
+    }
+  } catch (error: any) {
+    console.error('❌ Error initializing database schema:', error.message);
+    // Don't throw - schema might already exist
+  }
+}
+
+export async function getDatabaseClient(): Promise<PoolClient> {
+  if (!pool) {
+    initDatabase();
+  }
+  if (!pool) {
+    throw new Error('Database pool not initialized');
+  }
+  return pool.connect();
+}
+
+export function getPool(): Pool {
+  if (!pool) {
     return initDatabase();
   }
-  return db;
+  return pool;
 }
 
-export function closeDatabase(): void {
-  if (db) {
-    db.close();
-    db = null;
+export async function closeDatabase(): Promise<void> {
+  if (pool) {
+    await pool.end();
+    pool = null;
   }
 }
 
 // Graceful shutdown
-process.on('SIGINT', () => {
-  closeDatabase();
+process.on('SIGINT', async () => {
+  await closeDatabase();
   process.exit(0);
 });
 
-process.on('SIGTERM', () => {
-  closeDatabase();
+process.on('SIGTERM', async () => {
+  await closeDatabase();
   process.exit(0);
 });
-

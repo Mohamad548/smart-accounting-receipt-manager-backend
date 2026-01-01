@@ -9,9 +9,9 @@ const router = Router();
 router.use(authenticateToken);
 
 // GET /api/receipts - Get all receipts
-router.get('/', (req, res) => {
+router.get('/', async (req, res) => {
   try {
-    const receipts = ReceiptModel.getAll();
+    const receipts = await ReceiptModel.getAll();
     res.json(receipts);
   } catch (error: any) {
     console.error('Error fetching receipts:', error);
@@ -20,9 +20,9 @@ router.get('/', (req, res) => {
 });
 
 // GET /api/receipts/:id - Get receipt by ID
-router.get('/:id', (req, res) => {
+router.get('/:id', async (req, res) => {
   try {
-    const receipt = ReceiptModel.getById(req.params.id);
+    const receipt = await ReceiptModel.getById(req.params.id);
     if (!receipt) {
       return res.status(404).json({ message: 'فیش یافت نشد' });
     }
@@ -34,9 +34,9 @@ router.get('/:id', (req, res) => {
 });
 
 // GET /api/receipts/customer/:customerId - Get receipts by customer ID
-router.get('/customer/:customerId', (req, res) => {
+router.get('/customer/:customerId', async (req, res) => {
   try {
-    const receipts = ReceiptModel.getByCustomerId(req.params.customerId);
+    const receipts = await ReceiptModel.getByCustomerId(req.params.customerId);
     res.json(receipts);
   } catch (error: any) {
     console.error('Error fetching customer receipts:', error);
@@ -45,7 +45,7 @@ router.get('/customer/:customerId', (req, res) => {
 });
 
 // POST /api/receipts - Create new receipt
-router.post('/', (req, res) => {
+router.post('/', async (req, res) => {
   try {
     const {
       customerId,
@@ -65,20 +65,20 @@ router.post('/', (req, res) => {
     }
 
     // Check if customer exists
-    const customer = CustomerModel.getById(customerId);
+    const customer = await CustomerModel.getById(customerId);
     if (!customer) {
       return res.status(404).json({ message: 'مشتری یافت نشد' });
     }
 
     // Check for duplicate by refNumber
     if (refNumber) {
-      const existing = ReceiptModel.getByRefNumber(refNumber);
+      const existing = await ReceiptModel.getByRefNumber(refNumber);
       if (existing) {
         return res.status(400).json({ message: 'این فیش قبلاً ثبت شده است' });
       }
     }
 
-    const receipt = ReceiptModel.create({
+    const receipt = await ReceiptModel.create({
       customerId,
       amount: Number(amount),
       date,
@@ -92,7 +92,7 @@ router.post('/', (req, res) => {
     });
 
     // Update customer collected amount
-    CustomerModel.updateCollectedAmount(customerId, receipt.amount);
+    await CustomerModel.updateCollectedAmount(customerId, receipt.amount);
 
     res.status(201).json(receipt);
   } catch (error: any) {
@@ -102,17 +102,17 @@ router.post('/', (req, res) => {
 });
 
 // DELETE /api/receipts/:id - Delete receipt
-router.delete('/:id', (req, res) => {
+router.delete('/:id', async (req, res) => {
   try {
-    const receipt = ReceiptModel.getById(req.params.id);
+    const receipt = await ReceiptModel.getById(req.params.id);
     if (!receipt) {
       return res.status(404).json({ message: 'فیش یافت نشد' });
     }
 
     // Update customer collected amount (subtract)
-    CustomerModel.updateCollectedAmount(receipt.customerId, -receipt.amount);
+    await CustomerModel.updateCollectedAmount(receipt.customerId, -receipt.amount);
 
-    const deleted = ReceiptModel.delete(req.params.id);
+    const deleted = await ReceiptModel.delete(req.params.id);
     if (!deleted) {
       return res.status(404).json({ message: 'فیش یافت نشد' });
     }
