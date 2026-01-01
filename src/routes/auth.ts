@@ -1,7 +1,7 @@
 import { Router, Response } from 'express';
 import { UserModel } from '../models/UserModel.js';
 import { RefreshTokenModel } from '../models/RefreshTokenModel.js';
-import { generateAccessToken, generateRefreshToken, verifyRefreshToken, TokenPayload } from '../utils/jwt.js';
+import { generateAccessToken, generateRefreshToken, TokenPayload } from '../utils/jwt.js';
 
 const router = Router();
 
@@ -15,7 +15,7 @@ const cookieOptions = {
   httpOnly: true,
   secure: Boolean(isProduction || isCrossOrigin), // true for HTTPS or cross-origin
   sameSite: (isCrossOrigin ? 'none' : 'lax') as 'none' | 'lax', // 'none' for cross-origin, 'lax' for same-origin
-  maxAge: 15 * 60 * 1000, // 15 minutes for access token
+  maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days for access token (since we removed refresh token)
 };
 
 const refreshCookieOptions = {
@@ -65,51 +65,6 @@ router.post('/login', async (req, res: Response) => {
   } catch (error: any) {
     console.error('Login error:', error);
     res.status(500).json({ message: 'خطا در ورود به سیستم' });
-  }
-});
-
-// POST /api/auth/refresh - Refresh access token
-router.post('/refresh', async (req, res: Response) => {
-  try {
-    const refreshToken = req.cookies?.refreshToken;
-
-    if (!refreshToken) {
-      return res.status(401).json({ message: 'Refresh token یافت نشد' });
-    }
-
-    // Verify refresh token
-    const payload = verifyRefreshToken(refreshToken);
-    if (!payload) {
-      return res.status(403).json({ message: 'Refresh token نامعتبر است' });
-    }
-
-    // Check if token exists in database
-    const tokenRecord = await RefreshTokenModel.findByToken(refreshToken);
-    if (!tokenRecord) {
-      return res.status(403).json({ message: 'Refresh token یافت نشد' });
-    }
-
-    // Check if token is expired
-    if (tokenRecord.expiresAt < Date.now()) {
-      await RefreshTokenModel.deleteByToken(refreshToken);
-      return res.status(403).json({ message: 'Refresh token منقضی شده است' });
-    }
-
-    // Generate new access token
-    const newAccessToken = generateAccessToken({
-      userId: payload.userId,
-      username: payload.username,
-    });
-
-    // Set new access token cookie
-    res.cookie('accessToken', newAccessToken, cookieOptions);
-
-    res.json({
-      success: true,
-    });
-  } catch (error: any) {
-    console.error('Refresh token error:', error);
-    res.status(500).json({ message: 'خطا در تازه‌سازی توکن' });
   }
 });
 
