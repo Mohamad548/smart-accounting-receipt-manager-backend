@@ -198,7 +198,7 @@ app.get('/api/test-gemini', authenticateToken, async (req, res) => {
     
     try {
       const response = await ai.models.generateContent({
-        model: "gemini-1.5-flash",
+        model: "gemini-3-flash-preview",
         contents: {
           parts: [{ text: "سلام، فقط یک تست ساده است. لطفاً پاسخ دهید: OK" }],
         },
@@ -215,7 +215,7 @@ app.get('/api/test-gemini', authenticateToken, async (req, res) => {
         message: 'اتصال به Gemini API برقرار است',
         response: response.text || 'OK',
         responseTime: `${duration}ms`,
-        model: 'gemini-1.5-flash',
+        model: 'gemini-3-flash-preview',
         timestamp: new Date().toISOString()
       });
     } catch (geminiError: any) {

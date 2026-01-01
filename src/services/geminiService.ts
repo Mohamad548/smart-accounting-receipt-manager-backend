@@ -36,7 +36,7 @@ export const extractCreditorInfo = async (base64Image: string, retries = 2): Pro
       console.log('📤 [extractCreditorInfo] Sending request to Gemini API...');
       
       const response = await ai.models.generateContent({
-        model: "gemini-1.5-flash",
+        model: "gemini-3-flash-preview",
         contents: {
           parts: [
             { text: "استخراج اطلاعات حساب بانکی از تصویر:" },
@@ -139,7 +139,7 @@ export const extractReceiptData = async (base64Image: string, creditors: Credito
       console.log('📤 [extractReceiptData] Sending request to Gemini API...');
       
       const response = await ai.models.generateContent({
-        model: "gemini-1.5-flash",
+        model: "gemini-3-flash-preview",
         contents: {
           parts: [
             { text: "تحلیل و تطبیق هوشمند فیش با لیست صراف:" },
