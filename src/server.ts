@@ -176,7 +176,7 @@ app.get('/api/health', async (req, res) => {
 app.get('/api/test-gemini', authenticateToken, async (req, res) => {
   try {
     console.log('🔍 Testing Gemini API connection...');
-    const apiKey = process.env.API_KEY || process.env.GEMINI_API_KEY;
+    const apiKey = process.env.API_KEY;
     
     if (!apiKey) {
       console.error('❌ API_KEY not found in environment variables');

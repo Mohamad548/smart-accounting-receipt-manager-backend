@@ -77,17 +77,9 @@ export const extractCreditorInfo = async (base64Image: string, retries = 2): Pro
       console.error('Error message:', error.message);
       console.error('Full error:', JSON.stringify(error, Object.getOwnPropertyNames(error)));
       
-      // Check if it's a quota/rate limit error (429)
+      // Check if it's a quota/rate limit error (429) - Don't retry, quota is exhausted
       if (error.status === 429 || error.code === 429 || error.message?.includes('429') || error.message?.includes('quota') || error.message?.includes('RESOURCE_EXHAUSTED')) {
-        if (attempt < retries) {
-          // Extract retry delay from error message if available, otherwise use 20 seconds
-          const retryDelay = error.retryDelay || 20000;
-          console.log(`Quota exceeded. Retrying in ${retryDelay / 1000} seconds...`);
-          await sleep(retryDelay);
-          continue; // Retry
-        } else {
-          throw new Error("محدودیت استفاده از API تمام شده. لطفاً چند دقیقه صبر کرده و دوباره تلاش کنید.");
-        }
+        throw new Error("محدودیت استفاده از API تمام شده. لطفاً چند دقیقه صبر کرده و دوباره تلاش کنید.");
       }
       
       // For other errors, throw immediately
@@ -100,7 +92,7 @@ export const extractCreditorInfo = async (base64Image: string, retries = 2): Pro
 
 export const extractReceiptData = async (base64Image: string, creditors: Creditor[] = [], retries = 2): Promise<ExtractedData> => {
   console.log('🔍 [extractReceiptData] Starting extraction...');
-  const apiKey = process.env.API_KEY || process.env.GEMINI_API_KEY;
+  const apiKey = process.env.API_KEY;
   
   if (!apiKey) {
     console.error('❌ [extractReceiptData] API_KEY not found');
@@ -216,16 +208,9 @@ export const extractReceiptData = async (base64Image: string, creditors: Credito
       console.error('Error message:', error.message);
       console.error('Full error:', JSON.stringify(error, Object.getOwnPropertyNames(error)));
       
-      // Check if it's a quota/rate limit error (429)
+      // Check if it's a quota/rate limit error (429) - Don't retry, quota is exhausted
       if (error.status === 429 || error.code === 429 || error.message?.includes('429') || error.message?.includes('quota') || error.message?.includes('RESOURCE_EXHAUSTED')) {
-        if (attempt < retries) {
-          const retryDelay = error.retryDelay || 20000;
-          console.log(`Quota exceeded. Retrying in ${retryDelay / 1000} seconds...`);
-          await sleep(retryDelay);
-          continue; // Retry
-        } else {
-          throw new Error("محدودیت استفاده از API تمام شده. لطفاً چند دقیقه صبر کرده و دوباره تلاش کنید.");
-        }
+        throw new Error("محدودیت استفاده از API تمام شده. لطفاً چند دقیقه صبر کرده و دوباره تلاش کنید.");
       }
       
       // For other errors, throw immediately
