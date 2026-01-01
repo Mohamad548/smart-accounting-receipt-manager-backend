@@ -6,22 +6,27 @@ import { generateAccessToken, generateRefreshToken, TokenPayload } from '../util
 const router = Router();
 
 // Cookie options
-// For cross-origin (localhost to Render.com), we need sameSite: 'none' and secure: true
+// Since we're using Authorization header for cross-origin, cookies are less critical
+// But we still set them for same-origin requests
 const isProduction = process.env.NODE_ENV === 'production';
 const frontendUrl = process.env.FRONTEND_URL || '';
-const isCrossOrigin = frontendUrl && !frontendUrl.includes('localhost');
+
+// For Render (production), always use secure cookies with sameSite: 'none' for cross-origin support
+// For local development, use lax with secure: false
+const useSecureCookies = isProduction; // Render is always HTTPS
+const useSameSiteNone = isProduction; // For cross-origin support on Render
 
 const cookieOptions = {
   httpOnly: true,
-  secure: Boolean(isProduction || isCrossOrigin), // true for HTTPS or cross-origin
-  sameSite: (isCrossOrigin ? 'none' : 'lax') as 'none' | 'lax', // 'none' for cross-origin, 'lax' for same-origin
+  secure: useSecureCookies, // true for production (HTTPS)
+  sameSite: (useSameSiteNone ? 'none' : 'lax') as 'none' | 'lax',
   maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days for access token (since we removed refresh token)
 };
 
 const refreshCookieOptions = {
   httpOnly: true,
-  secure: Boolean(isProduction || isCrossOrigin), // true for HTTPS or cross-origin
-  sameSite: (isCrossOrigin ? 'none' : 'lax') as 'none' | 'lax', // 'none' for cross-origin, 'lax' for same-origin
+  secure: useSecureCookies, // true for production (HTTPS)
+  sameSite: (useSameSiteNone ? 'none' : 'lax') as 'none' | 'lax',
   maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days for refresh token
 };
 
