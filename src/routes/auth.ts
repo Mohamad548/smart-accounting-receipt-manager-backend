@@ -61,6 +61,7 @@ router.post('/login', async (req, res: Response) => {
         id: user.id,
         username: user.username,
       },
+      token: accessToken, // Also return token in response for cross-origin support
     });
   } catch (error: any) {
     console.error('Login error:', error);
