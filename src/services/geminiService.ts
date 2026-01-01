@@ -5,7 +5,10 @@ import { ExtractedData, Creditor } from "../types.js";
 /**
  * Extracts specific recipient bank details (Name, Account, Sheba) for adding a new creditor.
  */
-export const extractCreditorInfo = async (base64Image: string): Promise<{ name: string, account: string, sheba: string }> => {
+// Helper function to wait/sleep
+const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+export const extractCreditorInfo = async (base64Image: string, retries = 2): Promise<{ name: string, account: string, sheba: string }> => {
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY as string });
   
   const systemInstruction = `
@@ -17,42 +20,61 @@ export const extractCreditorInfo = async (base64Image: string): Promise<{ name: 
     فقط و فقط خروجی JSON بازگردانید.
   `;
 
-  try {
-    const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
-      contents: {
-        parts: [
-          { text: "استخراج اطلاعات حساب بانکی از تصویر:" },
-          {
-            inlineData: {
-              mimeType: "image/jpeg",
-              data: base64Image.split(",")[1] || base64Image,
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const response = await ai.models.generateContent({
+        model: "gemini-3-flash-preview",
+        contents: {
+          parts: [
+            { text: "استخراج اطلاعات حساب بانکی از تصویر:" },
+            {
+              inlineData: {
+                mimeType: "image/jpeg",
+                data: base64Image.split(",")[1] || base64Image,
+              },
             },
-          },
-        ],
-      },
-      config: {
-        systemInstruction: systemInstruction,
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            name: { type: Type.STRING },
-            account: { type: Type.STRING },
-            sheba: { type: Type.STRING, description: "24 digit number without IR" }
-          }
+          ],
         },
-      },
-    });
+        config: {
+          systemInstruction: systemInstruction,
+          responseMimeType: "application/json",
+          responseSchema: {
+            type: Type.OBJECT,
+            properties: {
+              name: { type: Type.STRING },
+              account: { type: Type.STRING },
+              sheba: { type: Type.STRING, description: "24 digit number without IR" }
+            }
+          },
+        },
+      });
 
-    return JSON.parse(response.text || "{}");
-  } catch (error: any) {
-    console.error("Creditor extraction failed", error);
-    throw new Error("خطا در بازخوانی تصویر حساب.");
+      return JSON.parse(response.text || "{}");
+    } catch (error: any) {
+      console.error(`Creditor extraction failed (attempt ${attempt + 1}/${retries + 1})`, error);
+      
+      // Check if it's a quota/rate limit error (429)
+      if (error.status === 429 || error.code === 429 || error.message?.includes('429') || error.message?.includes('quota') || error.message?.includes('RESOURCE_EXHAUSTED')) {
+        if (attempt < retries) {
+          // Extract retry delay from error message if available, otherwise use 20 seconds
+          const retryDelay = error.retryDelay || 20000;
+          console.log(`Quota exceeded. Retrying in ${retryDelay / 1000} seconds...`);
+          await sleep(retryDelay);
+          continue; // Retry
+        } else {
+          throw new Error("محدودیت استفاده از API تمام شده. لطفاً چند دقیقه صبر کرده و دوباره تلاش کنید.");
+        }
+      }
+      
+      // For other errors, throw immediately
+      throw new Error("خطا در بازخوانی تصویر حساب.");
+    }
   }
+  
+  throw new Error("خطا در بازخوانی تصویر حساب.");
 };
 
-export const extractReceiptData = async (base64Image: string, creditors: Creditor[] = []): Promise<ExtractedData> => {
+export const extractReceiptData = async (base64Image: string, creditors: Creditor[] = [], retries = 2): Promise<ExtractedData> => {
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY as string });
   
   const creditorsContext = creditors.map(c => 
@@ -76,74 +98,92 @@ export const extractReceiptData = async (base64Image: string, creditors: Credito
     خروجی فقط به فرمت JSON باشد.
   `;
 
-  try {
-    const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
-      contents: {
-        parts: [
-          { text: "تحلیل و تطبیق هوشمند فیش با لیست صراف:" },
-          {
-            inlineData: {
-              mimeType: "image/jpeg",
-              data: base64Image.split(",")[1] || base64Image,
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const response = await ai.models.generateContent({
+        model: "gemini-3-flash-preview",
+        contents: {
+          parts: [
+            { text: "تحلیل و تطبیق هوشمند فیش با لیست صراف:" },
+            {
+              inlineData: {
+                mimeType: "image/jpeg",
+                data: base64Image.split(",")[1] || base64Image,
+              },
             },
-          },
-        ],
-      },
-      config: {
-        systemInstruction: systemInstruction,
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            isReceipt: { type: Type.BOOLEAN },
-            amount: { type: Type.NUMBER },
-            date: { type: Type.STRING },
-            refNumber: { type: Type.STRING },
-            sender: { type: Type.STRING },
-            receiver: { type: Type.STRING },
-            description: { type: Type.STRING },
-            matchedCreditorId: { type: Type.STRING, description: "ID طلبکار تطبیق داده شده از لیست" },
-            dynamicFields: {
-              type: Type.ARRAY,
-              items: {
-                type: Type.OBJECT,
-                properties: {
-                  key: { type: Type.STRING },
-                  value: { type: Type.STRING }
-                },
-                required: ["key", "value"]
-              }
-            }
-          },
-          required: ["isReceipt"]
+          ],
         },
-      },
-    });
+        config: {
+          systemInstruction: systemInstruction,
+          responseMimeType: "application/json",
+          responseSchema: {
+            type: Type.OBJECT,
+            properties: {
+              isReceipt: { type: Type.BOOLEAN },
+              amount: { type: Type.NUMBER },
+              date: { type: Type.STRING },
+              refNumber: { type: Type.STRING },
+              sender: { type: Type.STRING },
+              receiver: { type: Type.STRING },
+              description: { type: Type.STRING },
+              matchedCreditorId: { type: Type.STRING, description: "ID طلبکار تطبیق داده شده از لیست" },
+              dynamicFields: {
+                type: Type.ARRAY,
+                items: {
+                  type: Type.OBJECT,
+                  properties: {
+                    key: { type: Type.STRING },
+                    value: { type: Type.STRING }
+                  },
+                  required: ["key", "value"]
+                }
+              }
+            },
+            required: ["isReceipt"]
+          },
+        },
+      });
 
-    const data = JSON.parse(response.text || "{}");
-    
-    if (data.isReceipt === false) {
-      throw new Error(data.description || "تصویر ارسالی به عنوان فیش معتبر شناسایی نشد.");
+      const data = JSON.parse(response.text || "{}");
+      
+      if (data.isReceipt === false) {
+        throw new Error(data.description || "تصویر ارسالی به عنوان فیش معتبر شناسایی نشد.");
+      }
+
+      const dynamicFieldsRecord: Record<string, string> = {};
+      if (data.dynamicFields) {
+        data.dynamicFields.forEach((f: any) => dynamicFieldsRecord[f.key] = f.value);
+      }
+
+      return {
+        amount: data.amount || 0,
+        date: data.date || "",
+        refNumber: data.refNumber || "",
+        sender: data.sender || "",
+        receiver: data.receiver || "",
+        description: data.description || "",
+        matchedCreditorId: data.matchedCreditorId || undefined,
+        dynamicFields: dynamicFieldsRecord
+      };
+    } catch (error: any) {
+      console.error(`Extraction failed (attempt ${attempt + 1}/${retries + 1})`, error);
+      
+      // Check if it's a quota/rate limit error (429)
+      if (error.status === 429 || error.code === 429 || error.message?.includes('429') || error.message?.includes('quota') || error.message?.includes('RESOURCE_EXHAUSTED')) {
+        if (attempt < retries) {
+          const retryDelay = error.retryDelay || 20000;
+          console.log(`Quota exceeded. Retrying in ${retryDelay / 1000} seconds...`);
+          await sleep(retryDelay);
+          continue; // Retry
+        } else {
+          throw new Error("محدودیت استفاده از API تمام شده. لطفاً چند دقیقه صبر کرده و دوباره تلاش کنید.");
+        }
+      }
+      
+      // For other errors, throw immediately
+      throw new Error(error.message || "خطا در پردازش تصویر.");
     }
-
-    const dynamicFieldsRecord: Record<string, string> = {};
-    if (data.dynamicFields) {
-      data.dynamicFields.forEach((f: any) => dynamicFieldsRecord[f.key] = f.value);
-    }
-
-    return {
-      amount: data.amount || 0,
-      date: data.date || "",
-      refNumber: data.refNumber || "",
-      sender: data.sender || "",
-      receiver: data.receiver || "",
-      description: data.description || "",
-      matchedCreditorId: data.matchedCreditorId || undefined,
-      dynamicFields: dynamicFieldsRecord
-    };
-  } catch (error: any) {
-    console.error("Extraction failed", error);
-    throw new Error(error.message || "خطا در پردازش تصویر.");
   }
+  
+  throw new Error("خطا در پردازش تصویر.");
 };
