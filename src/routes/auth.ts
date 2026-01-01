@@ -6,17 +6,22 @@ import { generateAccessToken, generateRefreshToken, verifyRefreshToken, TokenPay
 const router = Router();
 
 // Cookie options
+// For cross-origin (localhost to Render.com), we need sameSite: 'none' and secure: true
+const isProduction = process.env.NODE_ENV === 'production';
+const frontendUrl = process.env.FRONTEND_URL || '';
+const isCrossOrigin = frontendUrl && !frontendUrl.includes('localhost');
+
 const cookieOptions = {
   httpOnly: true,
-  secure: process.env.NODE_ENV === 'production',
-  sameSite: 'lax' as const, // Changed from 'strict' to 'lax' for cross-origin support
+  secure: Boolean(isProduction || isCrossOrigin), // true for HTTPS or cross-origin
+  sameSite: (isCrossOrigin ? 'none' : 'lax') as 'none' | 'lax', // 'none' for cross-origin, 'lax' for same-origin
   maxAge: 15 * 60 * 1000, // 15 minutes for access token
 };
 
 const refreshCookieOptions = {
   httpOnly: true,
-  secure: process.env.NODE_ENV === 'production',
-  sameSite: 'lax' as const, // Changed from 'strict' to 'lax' for cross-origin support
+  secure: Boolean(isProduction || isCrossOrigin), // true for HTTPS or cross-origin
+  sameSite: (isCrossOrigin ? 'none' : 'lax') as 'none' | 'lax', // 'none' for cross-origin, 'lax' for same-origin
   maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days for refresh token
 };
 
