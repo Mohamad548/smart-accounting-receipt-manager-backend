@@ -82,8 +82,26 @@ app.use('/api/customers', customersRouter);
 app.use('/api/receipts', receiptsRouter);
 
 // Health check
-app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', message: 'Backend is running', database: 'connected' });
+app.get('/api/health', async (req, res) => {
+  try {
+    const { getPool } = await import('./database/db');
+    const pool = getPool();
+    await pool.query('SELECT 1');
+    res.json({ 
+      status: 'ok', 
+      message: 'Backend is running', 
+      database: 'connected',
+      timestamp: new Date().toISOString()
+    });
+  } catch (error: any) {
+    res.status(500).json({ 
+      status: 'error', 
+      message: 'Backend is running but database connection failed', 
+      database: 'disconnected',
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
 });
 
 // Start token cleanup

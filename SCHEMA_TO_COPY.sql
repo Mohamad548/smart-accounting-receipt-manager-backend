@@ -1,6 +1,7 @@
--- Database Schema for Smart Accounting Receipt Manager
--- PostgreSQL Database (for Neon.tech)
--- All tables will be created in a separate schema to avoid conflicts
+-- ============================================
+-- Smart Accounting Receipt Manager Schema
+-- کپی کنید و در Neon SQL Editor اجرا کنید
+-- ============================================
 
 -- Create schema if not exists
 CREATE SCHEMA IF NOT EXISTS smart_accounting_receipt_manager;
@@ -81,3 +82,4 @@ CREATE INDEX IF NOT EXISTS idx_creditors_name ON smart_accounting_receipt_manage
 CREATE INDEX IF NOT EXISTS idx_users_username ON smart_accounting_receipt_manager.users(username);
 CREATE INDEX IF NOT EXISTS idx_refresh_tokens_token ON smart_accounting_receipt_manager.refresh_tokens(token);
 CREATE INDEX IF NOT EXISTS idx_refresh_tokens_user_id ON smart_accounting_receipt_manager.refresh_tokens(user_id);
+

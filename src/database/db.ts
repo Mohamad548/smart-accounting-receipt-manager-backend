@@ -29,10 +29,16 @@ export function initDatabase(): Pool {
     ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
   });
 
+  // Set default search path for all queries
+  pool.on('connect', async (client) => {
+    await client.query('SET search_path TO smart_accounting_receipt_manager, public');
+  });
+
   // Test connection
   pool.query('SELECT NOW()')
     .then(() => {
       console.log('✅ Database connected successfully');
+      console.log('📦 Using schema: smart_accounting_receipt_manager');
     })
     .catch((err) => {
       console.error('❌ Database connection failed:', err);
@@ -59,12 +65,15 @@ async function initializeSchema() {
 
     const client = await pool.connect();
     try {
+      // Set search path first
+      await client.query('SET search_path TO smart_accounting_receipt_manager, public');
+      
       for (const statement of statements) {
-        if (statement.trim()) {
+        if (statement.trim() && !statement.toUpperCase().startsWith('SET')) {
           await client.query(statement);
         }
       }
-      console.log('✅ Database schema initialized successfully');
+      console.log('✅ Database schema initialized successfully in schema: smart_accounting_receipt_manager');
     } finally {
       client.release();
     }

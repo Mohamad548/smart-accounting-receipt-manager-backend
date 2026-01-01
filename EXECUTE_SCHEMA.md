@@ -1,7 +1,65 @@
--- Database Schema for Smart Accounting Receipt Manager
--- PostgreSQL Database (for Neon.tech)
--- All tables will be created in a separate schema to avoid conflicts
+# 🚀 راهنمای اجرای Schema در Neon
 
+## 📋 مراحل اجرا
+
+### قدم 1: باز کردن SQL Editor در Neon
+
+1. به [Neon Console](https://console.neon.tech/app/projects/flat-frog-84289534) بروید
+2. در منوی سمت چپ، روی **"SQL Editor"** کلیک کنید
+3. یک Query جدید ایجاد کنید
+
+### قدم 2: کپی کردن Schema
+
+1. فایل `backend/src/database/schema.postgresql.sql` را باز کنید
+2. **تمام محتوا** را کپی کنید (Ctrl+A, Ctrl+C)
+
+### قدم 3: پیست و اجرا
+
+1. در SQL Editor، محتوا را پیست کنید (Ctrl+V)
+2. روی دکمه **"Run"** یا **"Execute"** کلیک کنید
+3. منتظر بمانید تا اجرا شود
+
+### قدم 4: بررسی
+
+بعد از اجرا، این Query را در SQL Editor اجرا کنید:
+
+```sql
+SELECT table_name 
+FROM information_schema.tables 
+WHERE table_schema = 'smart_accounting_receipt_manager'
+ORDER BY table_name;
+```
+
+**باید این 5 جدول را ببینید:**
+- users
+- refresh_tokens
+- creditors
+- customers
+- receipt_records
+
+---
+
+## ✅ بعد از اجرای Schema
+
+بعد از اجرای موفق Schema، تست کنید:
+
+```bash
+cd backend
+npm run test:connection
+```
+
+**باید این پیام را ببینید:**
+```
+✅ All required tables exist in schema: smart_accounting_receipt_manager!
+```
+
+---
+
+## 📝 محتوای Schema (برای کپی)
+
+اگر فایل را پیدا نکردید، این محتوا را کپی کنید:
+
+```sql
 -- Create schema if not exists
 CREATE SCHEMA IF NOT EXISTS smart_accounting_receipt_manager;
 
@@ -81,3 +139,23 @@ CREATE INDEX IF NOT EXISTS idx_creditors_name ON smart_accounting_receipt_manage
 CREATE INDEX IF NOT EXISTS idx_users_username ON smart_accounting_receipt_manager.users(username);
 CREATE INDEX IF NOT EXISTS idx_refresh_tokens_token ON smart_accounting_receipt_manager.refresh_tokens(token);
 CREATE INDEX IF NOT EXISTS idx_refresh_tokens_user_id ON smart_accounting_receipt_manager.refresh_tokens(user_id);
+```
+
+---
+
+## ⚠️ نکات مهم
+
+- Schema نام: `smart_accounting_receipt_manager` (با underscore)
+- تمام جداول در این schema قرار می‌گیرند
+- جداول در `public` schema دست نخورده می‌مانند
+- بعد از اجرا، schema و جداول ایجاد می‌شوند
+
+---
+
+## 🎯 خلاصه
+
+1. به Neon SQL Editor بروید
+2. Schema را کپی و اجرا کنید
+3. جداول را بررسی کنید
+4. تست کنید: `npm run test:connection`
+

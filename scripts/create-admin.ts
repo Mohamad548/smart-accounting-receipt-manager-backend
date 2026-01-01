@@ -1,5 +1,10 @@
+import { config } from 'dotenv';
+import { resolve } from 'path';
 import { initDatabase } from '../src/database/db';
 import { UserModel } from '../src/models/UserModel';
+
+// Load .env file
+config({ path: resolve(process.cwd(), '.env') });
 
 async function createAdmin() {
   console.log('🔐 Creating admin user...\n');
